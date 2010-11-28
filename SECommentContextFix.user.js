@@ -38,6 +38,9 @@ with_jquery(function ($) {
 				.addClass("patched")
 				.data('events'),
 			found = false;
+			
+		if (!commentBoxes.length || !events)
+			return;
 
 		if (events.keyup) {
 			for (var i = events.keyup.length - 1; !found && i > 0; --i) {
