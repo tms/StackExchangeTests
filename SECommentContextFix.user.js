@@ -41,9 +41,9 @@ with_jquery(function ($) {
 
 		if (events.keyup) {
 			for (var i = events.keyup.length - 1; !found && i > 0; --i) {
-				var stringified = events.keyup[i].toString();
-				
-				if (found = stringified.matches(/\.which ?== ?13 ?&& ? ![^.]+\.shiftKey/)) {
+				var stringified = events.keyup[i].handler.toString();
+
+				if (found = stringified.match(/\.which ?== ?13 ?&& ? ![^.]+\.shiftKey/)) {
 					var handler = events.keyup.splice(i, 1);
 
 					if (!events.keydown)
@@ -51,13 +51,17 @@ with_jquery(function ($) {
 
 					events.keydown.push(handler);
 				}
+
 			}
 		}
+		
+		commentBoxes.data('events', events);
 	}
 
 	$(function () {
+		$('.comments-link:visible').click(hook);
 		$(document).ajaxComplete(function(event, request, options) {
-			if (options && options.url.matches(/^\/posts\/[0-9]+\/comments/)) {
+			if (options && options.url && options.url.match(/^\/posts\/[0-9]+\/comments/)) {
 				hook();
 			}
 		});
