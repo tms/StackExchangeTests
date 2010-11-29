@@ -46,19 +46,14 @@ with_jquery(function ($) {
 			for (var i = events.keyup.length - 1; !found && i > 0; --i) {
 				var stringified = events.keyup[i].handler.toString();
 
-				if (found = stringified.match(/\.which ?== ?13 ?&& ? ![^.]+\.shiftKey/)) {
-					var handler = events.keyup.splice(i, 1);
-
-					if (!events.keydown)
-						events.keydown = [];
-
-					events.keydown.push(handler);
+				if (found = stringified.match(/\.which ?== ?13 ?&& ?![^.]+\.shiftKey/)) {
+					var handler = events.keyup.splice(i, 1)[0].handler;
+					
+					commentBoxes.bind('keydown', handler);
 				}
 
 			}
 		}
-		
-		commentBoxes.data('events', events);
 	}
 
 	$(function () {
