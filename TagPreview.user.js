@@ -36,22 +36,94 @@ function loader(f) {
 }
 
 loader(function() {
-	var isMeta = location.host.match(/^meta\./i);
+	var isMeta = location.host.match(/^meta\./i),
+		style = null,
+		colour = '#FFFFFF';
 
 	if (isMeta) {
-		try {
+		var sample = document.createElement('span');
+			sample.className = 'moderator-tag';
+			sample.display = 'none';
+
+		document.body.appendChild(sample);
+
+		if (document.defaultView.getComputedStyle) {
+			colour = document.defaultView.getComputedStyle(sample, null).getPropertyValue('color');
+		} else if (sample.currentStyle) {
+			colour = sample.currentStyle['color'];
+		}
+
+		document.body.removeChild(sample);
+
 		var style = document.createElement('style');
 			style.type = 'text/css';
-			style.textContent = '#wmd-preview a.moderator-tag, .post-text a.moderator-tag { color: #FFFFFF; }';
-
-		document.getElementsByTagName('head')[0].appendChild(style);
-		} catch (e) {
-			console.log(e);
-		}
+			style.textContent = '.post-text a.moderator-tag { color: ' + colour + '; }' +
+				'#wmd-preview a.required-tag {' +
+					'border-bottom: ' + reqBorderWidth + ' solid ' + reqBorderColour + ';' +
+				'}';
 	}
 
 	if (window.Attacklab == null || Attacklab.postSafeHtmlHook == null) {
+		if (style) {
+			document.getElementsByTagName('head')[0].appendChild(style);
+		}
+
 		return;
+	}
+
+	if (isMeta) {
+		var modBorderColour = '',
+			modBorderWidth = '',
+			reqBorderColour = '',
+			reqBorderWidth = '',
+			plainBorderColour = '',
+			plainBorderWidth = '',
+			computedStyle = null,
+			sample = document.createElement('span');
+			sample.className = 'moderator-tag';
+			sample.display = 'none';
+			
+		document.body.appendChild(sample);
+
+		if (document.defaultView.getComputedStyle) {
+			computedStyle = document.defaultView.getComputedStyle(sample, null);
+			colour = computedStyle.getPropertyValue('color');
+			modBorderWidth = computedStyle.getPropertyValue('border-bottom-width');
+			modBorderColour = computedStyle.getPropertyValue('border-bottom-color');
+			sample.className = 'required-tag';
+			computedStyle = document.defaultView.getComputedStyle(sample, null);
+			reqBorderWidth = computedStyle.getPropertyValue('border-bottom-width');
+			reqBorderColour = computedStyle.getPropertyValue('border-bottom-color');
+			sample.className = 'post-tag';
+			computedStyle = document.defaultView.getComputedStyle(sample, null);
+			plainBorderWidth = computedStyle.getPropertyValue('border-bottom-width');
+			plainBorderColour = computedStyle.getPropertyValue('border-bottom-color');
+		} else if (sample.currentStyle) {
+			colour = sample.currentStyle['color'];
+			modBorderWith = sample.currentStyle['borderBottomWidth'];
+			modBorderColour = sample.currentStyle['borderBottomColor'];
+			sample.className = 'required-tag';
+			reqBorderWidth = sample.currentStyle['borderBottomWidth'];
+			reqBorderColour = sample.currentStyle['borderBottomColor'];
+			sample.className = 'post-tag';
+			plainBorderWidth = sample.currentStyle['borderBottomWidth'];
+			plainBorderColour = sample.currentStyle['borderBottomColor'];
+		}
+
+		document.body.removeChild(sample);
+
+		style.textContent += '#wmd-preview a.post-tag {' +
+					'border-bottom: ' + plainBorderWidth + ' solid ' + plainBorderColour + ';' +
+				'}' +
+				'#wmd-preview a.moderator-tag {' +
+					'color: ' + colour + ';' +
+					'border-bottom: ' + modBorderWidth + ' solid ' + modBorderColour + ';' +
+				'}' +
+				'#wmd-preview a.required-tag {' +
+					'border-bottom: ' + reqBorderWidth + ' solid ' + reqBorderColour + ';' +
+				'}';
+
+		document.getElementsByTagName('head')[0].appendChild(style);
 	}
 
 	var original = Attacklab.postSafeHtmlHook,
@@ -113,22 +185,16 @@ loader(function() {
 
 				if (tags) {
 					if (special[2] && tags.sub) {
-						for (var i = 0; i < tags.sub.length; ++i) {
-							if (tags.sub[i] == special[2]) {
-								break;
-							}
+						var matched = false;
 
-							if (i == tags.sub.length - 1) {
-								return wholeMatch;
-							}
+						for (var i = 0; i < tags.sub.length && !matched; ++i) {
+							matched = tags.sub[i] == special[2];
 						}
-					} else if (special[2]) {
-						return wholeMatch;
+						
+						if (matched) {
+							cssClass = (tags.mod ? 'moderator' : 'required') + '-tag';
+						}
 					}
-
-					cssClass = (tags.mod ? 'moderator' : 'required') + '-tag';
-				} else {
-					return wholeMatch;
 				}
 			} else if (type != 'tag') {
 				return wholeMatch;
