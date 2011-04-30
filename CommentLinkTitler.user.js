@@ -61,7 +61,11 @@ inject(function ($) {
 				ids.push(url[1]);
 			}
 			
-			request(ids[0], callback);
+			if (ids.length) {
+				request(ids[0], callback);
+			} else {
+				submit.call(form.eq(0));
+			}
 
 			link.lastIndex = 0;
 			
