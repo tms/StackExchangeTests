@@ -34,18 +34,15 @@ function inject() {
 	}
 }
 
-inject(function ($) {
-	function request(id, callback) {
-		$.getJSON('http://api.' + window.location.hostname + '/1.1/questions/' + id + '?jsonp=?', callback);
-	}
-	
+inject(function ($) {	
 	function HijackedTextarea(t) {
 		var textarea = t.addClass('link-hijacked'),
 			form = textarea.closest('form'),
-			checker = textarea.data('events').keyup[0].handler,
-			link = new RegExp('(?:^|[^\\(])http://' + window.location.hostname + '/q(?:uestions)?/([0-9]+)', 'ig'),
-			lock = false,
-			submit = form.data('events').submit[0].handler;
+			link = new RegExp('(?:^|[^\\(])http://([^\\s/]+)/q(?:uestions)?/([0-9]+)', 'ig'),
+			lock = 0,
+			submitComment = form.data('events').submit[0].handler,
+			validSites = /^(?:(?:(?:meta\.)?(?:stackoverflow|[^.]+\.stackexchange|serverfault|askubuntu|superuser))|stackapps)\.com$/i,
+			results = [];
 			
 		form.data('events').submit[0].handler = handler;
 		
@@ -53,32 +50,86 @@ inject(function ($) {
 			if (lock)
 				return;
 
-			lock = true;
+			lock = -1;
 		
-			var url, ids = [];
+			var url, ids = {}, count = 0;;
 
 			while (url = link.exec(textarea.val())) {
-				ids.push(url[1]);
+				if (!ids[url[1]])
+					ids[url[1]] = []
+			
+				ids[url[1]].push(url[2]);
+				
+				++count;
 			}
 			
-			if (ids.length) {
-				request(ids[0], callback);
-			} else {
+			if (count)
+				request(ids, callback);
+			else
 				submit.call(form.eq(0));
-			}
 
 			link.lastIndex = 0;
 			
 			return false;
 		}
 		
-		function callback(data) {
-			textarea.val(textarea.val().replace(new RegExp('(?:^|[^\\(])(http://' + window.location.hostname + '/q(?:uestions)?/' + data.questions[0].question_id + '[^\\s]+)', 'i'), '[' + data.questions[0].title + ']($1)')); 
-			textarea.keyup();
-			
-			submit.call(form.eq(0));
+		function callback(data, domain) {
+			lock = lock - 1 === 0 ? -1 : lock - 1;
 		
-			lock = false;
+			if (!data.questions || !data.questions.length)
+				return;
+		
+			data.domain = domain;
+			
+			results.push(data);
+			
+			if (lock < 0) {
+				submit();
+			}
+		}
+		
+		function submit() {
+			var i, j, pattern, value = textarea.val();
+		
+			if (results.length) {
+				for (i = 0; i < results.length; ++i) {
+					for (j = 0; j < results[i].questions.length; ++j) {
+						pattern = '(?:^|[^\\(])http://' + results[i].domain + '/(q(?:uestions)?)/' + results[i].questions[j].question_id + '(?:/[^\\s/]*)?(/[0-9]+)?(#[^\\s]+)?';
+						value = value.replace(new RegExp(pattern, 'i'), function (s, question, trailing, anchor) {
+							trailing = trailing || '';
+							anchor = anchor || '';
+						
+							return '[' + results[i].questions[j].title + '](http://' + results[i].domain + '/' +
+								(question === 'questions' && trailing === '' ? 'q' : question) + '/' + results[i].questions[j].question_id +
+								(question === 'q' ? '' : trailing) + anchor + ')';
+						});
+					}
+				}
+			
+				textarea.val(value).keyup();
+			}
+			
+			submitComment.call(form.eq(0));
+
+			results = [];
+			lock = 0;
+		}
+		
+		function request(ids, callback) {
+			for (var domain in ids) {
+				if (validSites.test(domain)) {
+					lock = lock < 0 ? 1 : lock + 1;
+					
+					$.getJSON('http://api.' + domain + '/1.1/questions/' + ids[domain].join(';') + '?jsonp=?',
+						(function (d) {
+							var domain = d;
+			
+							return function (data) {
+								callback(data, domain);
+							};
+						})(domain));
+				}
+			}
 		}
 	}
 	
