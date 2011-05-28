@@ -1,4 +1,4 @@
-﻿// ==UserScript==
+// ==UserScript==
 // @name          SE Tag Popup Ignore Link Adder
 // @description   A hook to add a tag ignore link to the tag popup
 // @include       http://stackoverflow.com/*
@@ -100,7 +100,7 @@ inject(function ($) {
 				tag = tag.substring(tag.lastIndexOf('/') + 1);
 			}
 			
-			var ignoring = isIgnoring(tag);
+			var ignoring = isIgnoring(tag), requesting = false;
 		
 			// Insert the ignore link (I wanted a unicode 'No Entry', but I couldn't find
 			// one that was well-supported, so you get radioactivity instead)
@@ -123,8 +123,9 @@ inject(function ($) {
 						}
 						
 						toggle(self, ignoring = !ignoring);
-					} else {
+					} else if (!requesting) {
 						// Otherwise we have to make the request ourselves
+						requesting = true;
 						ignored = ignoring ? ignored.replace(
 							new RegExp('(:?^|\s)' + quote(tag) + ' (:?\s|$)'), ''
 						) : ignored + tag + ' ';
@@ -139,6 +140,8 @@ inject(function ($) {
 							}, function (response) {
 								if (response === 'true')
 									toggle(self, ignoring = !ignoring);
+									
+								requesting = false;
 							});
 					}
 				})
