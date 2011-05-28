@@ -134,7 +134,7 @@ inject(function ($) {
 							ignored = '';
 						
 						$.post('/users/save-preference', {
-								'fkey': $('#fkey').val(),
+								'fkey': StackExchange.options.user.fkey,
 								'key': 25,
 								'value': ignored
 							}, function (response) {
